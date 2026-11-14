@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Santi's Hot Shots — Load Manager</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="96x96" href="assets/favicon-96x96.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="assets/site.webmanifest">
+<meta name="theme-color" content="#1B2A4A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* ===== Santi's Hot Shots brand tokens — defined ONCE, referenced everywhere ===== */
+  --navy-900:#0D1526;          /* page background          */
+  --navy-800:#14203A;          /* cards / panels           */
+  --navy-700:#1B2A4A;          /* raised surfaces, inputs  */
+  --navy-border:#2B3D63;       /* hairlines                */
+  --gold:#C9A227;              /* primary accent           */
+  --gold-2:#E3B33C;            /* lighter gold (links)     */
+  --flame:#E8631A;             /* secondary accent         */
+  --red-orange:#D94F2B;        /* danger / hot             */
+  --green:#7FB069;             /* money-positive           */
+  --yellow:#E5A93D;            /* warning / marginal       */
+  --text:#F4F1E8;              /* off-white body text      */
+  --muted:#98A6C4;
+  /* aliases used across the app CSS */
+  --bg:var(--navy-900); --panel:var(--navy-800); --panel2:var(--navy-700);
+  --border:var(--navy-border); --accent:var(--gold); --accent2:var(--gold-2);
+  --red:var(--red-orange);
+  --greenbg:rgba(127,176,105,.16); --redbg:rgba(217,79,43,.18); --yellowbg:rgba(229,169,61,.18);
+  --font-head:'Oswald','Arial Narrow',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:17px;line-height:1.45;-webkit-text-size-adjust:100%}
+button{font-family:inherit}
+input,select,textarea{font-family:inherit;font-size:17px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:10px 12px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px}
+input[type=radio],input[type=checkbox]{accent-color:var(--gold)}
+input[type=range]{accent-color:var(--flame)}
+input.invalid{border-color:var(--red);outline:2px solid var(--red)}
+label{display:block;font-size:14px;font-weight:600;color:var(--muted);margin:10px 0 4px;letter-spacing:.02em}
+a{color:var(--accent2)}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:50;background:rgba(13,21,38,.95);backdrop-filter:blur(6px);border-bottom:2px solid var(--gold);padding:10px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);margin-right:6px}
+.brandlogo{height:44px;width:44px;border-radius:50%;box-shadow:0 0 0 2px var(--gold),0 2px 10px rgba(0,0,0,.5)}
+.brandname{font-family:var(--font-head);font-weight:700;font-size:22px;letter-spacing:.05em;white-space:nowrap;text-transform:uppercase;line-height:1.1}
+.brandname span{color:var(--gold)}
+.brand:hover .brandlogo{box-shadow:0 0 0 2px var(--flame),0 0 14px rgba(232,99,26,.5)}
+.tabs{display:flex;gap:6px;flex:1;flex-wrap:wrap}
+.tab{padding:12px 18px;border-radius:12px;cursor:pointer;font-weight:600;font-size:18px;background:transparent;color:var(--muted);border:1px solid transparent;white-space:nowrap;font-family:var(--font-head);letter-spacing:.03em;text-transform:uppercase}
+.tab:hover{color:var(--gold-2);border-color:var(--gold);box-shadow:0 0 12px rgba(232,99,26,.28)}
+.tab.active{background:var(--gold);color:var(--navy-800);font-weight:700}
+.hbtns{display:flex;gap:8px}
+.btn{padding:10px 16px;border-radius:10px;border:1px solid var(--gold);background:var(--navy-800);color:var(--gold-2);font-weight:700;font-size:16px;cursor:pointer}
+.btn:hover{border-color:var(--flame);color:var(--flame);box-shadow:0 0 14px rgba(232,99,26,.35)}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:var(--navy-800)}
+.btn.primary:hover{color:var(--navy-900);background:var(--gold-2);box-shadow:0 0 16px rgba(232,99,26,.4)}
+.btn.danger{background:transparent;border-color:var(--red-orange);color:var(--red-orange)}
+.btn.danger:hover{box-shadow:0 0 12px rgba(217,79,43,.4)}
+.btn.big{width:100%;padding:16px;font-size:20px}
+
+main{padding:16px 14px 90px;max-width:1400px;margin:0 auto}
+section.tabpane{display:none}
+section.tabpane.active{display:block}
+h2{margin:4px 0 14px;font-size:26px;font-family:var(--font-head);font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+h2 .sub,h2 .sub *{text-transform:none}
+h3{margin:0 0 10px;font-size:17px;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;font-family:var(--font-head);font-weight:600}
+
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
+.card .k{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.card .v{font-size:26px;font-weight:800;margin-top:4px}
+.card .v.green{color:var(--green)} .card .v.red{color:var(--red)}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:16px}
+
+/* TABLES */
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:14px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:1180px}
+th,td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;font-size:16px}
+th{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.05em;background:var(--panel2);cursor:pointer;user-select:none;position:sticky;top:0}
+th:hover{color:var(--text)}
+th .dir{color:var(--accent2)}
+td{vertical-align:middle}
+tr.lrow{cursor:pointer}
+tr.lrow:hover{background:var(--panel2)}
+td.small, .mut{color:var(--muted)}
+
+/* PILLS / BADGES */
+.pill{display:inline-block;padding:4px 11px;border-radius:999px;font-weight:800;font-size:14px;line-height:1.2}
+.pill.red{background:var(--redbg);color:#F49B7A;border:1px solid #D94F2B66}
+.pill.yellow{background:var(--yellowbg);color:#F6CE6B;border:1px solid #E5A93D66}
+.pill.green{background:var(--greenbg);color:#B7DA9F;border:1px solid #7FB06966}
+.pill.gray{background:var(--panel2);color:var(--muted);border:1px solid var(--border)}
+.badge{display:inline-block;padding:4px 10px;border-radius:8px;font-weight:800;font-size:14px}
+.badge.g{background:var(--greenbg);color:var(--green)}
+.badge.r{background:var(--redbg);color:var(--red)}
+.badge.y{background:var(--yellowbg);color:var(--yellow)}
+.flag{display:inline-block;margin-left:6px;padding:3px 9px;border-radius:8px;font-weight:800;font-size:13px;background:var(--redbg);color:var(--red)}
+.flag.warn{background:var(--yellowbg);color:var(--yellow)}
+
+/* RATE BAR */
+.ratebar{margin-top:8px}
+.ratebar .track{position:relative;height:26px;background:var(--panel2);border:1px solid var(--border);border-radius:999px;overflow:hidden}
+.ratebar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,var(--navy-700) 0%,var(--gold) 55%,var(--flame) 100%);transition:width .3s}
+.ratebar .marker{position:absolute;top:-4px;bottom:-4px;width:4px;background:#fff;border-radius:2px;box-shadow:0 0 6px #000}
+.ratebar .labels{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin-top:6px;flex-wrap:wrap;gap:4px}
+
+/* FORMS */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 16px}
+.rowradio{display:flex;gap:10px;margin:6px 0 2px}
+.rowradio label{display:flex;align-items:center;gap:6px;margin:0;font-size:16px;color:var(--text);font-weight:600;background:var(--panel2);border:1px solid var(--border);padding:9px 14px;border-radius:9px;cursor:pointer}
+.rowradio input{width:auto}
+.sliderrow{display:flex;align-items:center;gap:12px}
+.sliderrow input[type=range]{flex:1;padding:0;height:34px;accent-color:var(--accent)}
+.scorebig{font-size:24px;font-weight:800;min-width:52px;text-align:center;padding:4px 10px;border-radius:10px}
+.newgrid{display:grid;grid-template-columns:minmax(320px,1.2fr) minmax(300px,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.newgrid{grid-template-columns:1fr}.grid2,.grid3{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.grid2,.grid3{grid-template-columns:1fr}.tab{padding:10px 12px;font-size:16px}.card .v{font-size:22px}}
+
+/* VERDICT */
+.verdict{border-radius:16px;padding:20px;text-align:center;font-size:30px;font-weight:900;line-height:1.25;margin:14px 0}
+.verdict small{display:block;font-size:16px;font-weight:600;margin-top:6px}
+.verdict.good{background:var(--greenbg);border:2px solid var(--green);color:var(--green)}
+.verdict.bad{background:var(--redbg);border:2px solid var(--red);color:var(--red)}
+.verdict.meh{background:var(--yellowbg);border:2px solid var(--yellow);color:var(--yellow)}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px dashed var(--border);font-size:17px}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--muted);font-weight:600}
+.kv .v{font-weight:800;text-align:right}
+.kv .v.g{color:var(--green)} .kv .v.r{color:var(--red)}
+
+/* MODAL */
+.modalback{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;padding:16px;overflow-y:auto}
+.modalback.open{display:block}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:16px;max-width:760px;margin:20px auto;padding:18px}
+.modal h2{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mbtns{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.mbtns .btn{flex:1;min-width:120px}
+
+/* TOAST */
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--gold);color:var(--navy-800);padding:12px 22px;border-radius:12px;font-weight:800;font-size:17px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:200;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+#toast.err{background:var(--red-orange);color:var(--text)}
+.sub{font-size:14px;color:var(--muted)}
+.breakdown{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-family:ui-monospace,Consolas,monospace;font-size:15px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.cpmhuge{font-size:36px;font-weight:700;color:var(--gold);font-family:var(--font-head);letter-spacing:.02em}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href="#" onclick="showTab('dashboard');return false" title="Santi's Hot Shots — Dashboard">
+    <img class="brandlogo" src="assets/logo.png" alt="Santi's Hot Shots logo">
+    <span class="brandname">SANTI'S <span>Hot Shots</span></span>
+  </a>
+  <nav class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="loads">Loads</button>
+    <button class="tab" data-tab="new">New Load</button>
+    <button class="tab" data-tab="settings">Cost Settings</button>
+  </nav>
+  <div class="hbtns">
+    <button class="btn" id="btnCsv">⬇ Export CSV</button>
+    <button class="btn" id="btnImport">⬆ Import</button>
+    <button class="btn danger" id="btnClearSamples">Clear sample data</button>
+    <input type="file" id="fileImport" accept=".json" hidden>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ DASHBOARD ============ -->
+<section class="tabpane active" id="tab-dashboard">
+  <h2>Dashboard — <span id="dashMonth" class="sub"></span></h2>
+  <div class="cards">
+    <div class="card"><div class="k">Total Revenue</div><div class="v" id="d_rev">$0</div></div>
+    <div class="card"><div class="k">Total Miles</div><div class="v" id="d_miles">0</div></div>
+    <div class="card"><div class="k">Avg RPM (dh-adj)</div><div class="v" id="d_rpm">$0.00</div></div>
+    <div class="card"><div class="k">Est. Expenses</div><div class="v red" id="d_cost">$0</div></div>
+    <div class="card"><div class="k">Est. Net Profit</div><div class="v" id="d_net">$0</div></div>
+    <div class="card"><div class="k">Loads Completed</div><div class="v" id="d_count">0</div></div>
+  </div>
+
+  <div class="panel">
+    <h3>Rate health</h3>
+    <div class="ratebar">
+      <div class="track">
+        <div class="fill" id="rbFill"></div>
+        <div class="marker" id="rbMarker"></div>
+      </div>
+      <div class="labels">
+        <span>Avg revenue/mile: <b id="rbAvg">$0.00</b>/mi</span>
+        <span>Break-even (cost/mile): <b id="rbCpm">$0.00</b>/mi</span>
+      </div>
+    </div>
+    <div id="rbVerdict" style="margin-top:10px;font-weight:800"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Best loads this month (top 5 by net profit)</h3>
+    <div class="tablewrap"><table style="min-width:640px">
+      <thead><tr><th>Broker</th><th>Route</th><th>Rate</th><th>DH-Adj RPM</th><th>Net Profit</th><th>Status</th></tr></thead>
+      <tbody id="d_best"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ============ LOADS ============ -->
+<section class="tabpane" id="tab-loads">
+  <div class="panel" style="margin-top:0">
+    <div class="grid3">
+      <div><label>Search (broker, MC, city, state)</label><input id="f_search" placeholder="e.g. Houston, MC#, broker…"></div>
+      <div><label>Status</label>
+        <select id="f_status"><option value="all">All statuses</option></select></div>
+      <div><label>Broker score color</label>
+        <select id="f_score">
+          <option value="all">All scores</option>
+          <option value="green">🟢 Reliable (80–100)</option>
+          <option value="yellow">🟡 OK (60–79)</option>
+          <option value="red">🔴 Risky (0–59)</option>
+        </select></div>
+      <div><label>Min deadhead-adj RPM ($/mi)</label><input id="f_minrpm" type="number" step="0.01" min="0" placeholder="e.g. 0.87"></div>
+      <div style="grid-column:span 2;display:flex;align-items:flex-end"><div class="sub" id="f_count"></div></div>
+    </div>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th data-sort="broker">Broker / MC</th>
+        <th data-sort="route">Route</th>
+        <th data-sort="total">Miles (L+DH=T)</th>
+        <th data-sort="rate">Rate</th>
+        <th data-sort="rpm">RPM (loaded)</th>
+        <th data-sort="dhrpm">DH-Adj RPM</th>
+        <th data-sort="cost">Est. Cost</th>
+        <th data-sort="net">Net Profit</th>
+        <th data-sort="status">Status</th>
+        <th>Quick Pay</th>
+        <th>Notes</th>
+      </tr></thead>
+      <tbody id="loadsBody"></tbody>
+    </table>
+  </div>
+  <p class="sub" style="margin-top:8px">Tap a row to open the full load editor. Tap the route to open Google Maps directions.</p>
+</section>
+
+<!-- ============ NEW LOAD ============ -->
+<section class="tabpane" id="tab-new">
+  <h2>New Load</h2>
+  <div class="newgrid">
+    <div class="panel" style="margin-top:0">
+      <div class="grid2">
+        <div><label>Broker name *</label><input id="nl_broker" placeholder="Broker / company"></div>
+        <div><label>MC #</label><input id="nl_mc" placeholder="MC123456"></div>
+      </div>
+      <label>Broker score (0–100)</label>
+      <div class="sliderrow">
+        <input type="range" id="nl_score" min="0" max="100" value="70">
+        <div class="scorebig" id="nl_scoreBig">70</div>
+      </div>
+      <div class="grid2">
+        <div><label>Days to pay</label><input id="nl_days" type="number" min="0" placeholder="e.g. 30"></div>
+        <div><label>Quick pay fee % (if offered)</label><input id="nl_qpPct" type="number" min="0" max="100" step="0.5" placeholder="e.g. 3"></div>
+      </div>
+      <div class="grid2">
+        <div><label>Pickup city</label><input id="nl_puCity" placeholder="Houston"></div>
+        <div><label>Pickup state</label><input id="nl_puState" placeholder="TX" maxlength="20"></div>
+      </div>
+      <div class="grid2">
+        <div><label>Dropoff city</label><input id="nl_doCity" placeholder="Dallas"></div>
+        <div><label>Dropoff state</label><input id="nl_doState" placeholder="TX" maxlength="20"></div>
+      </div>
+      <div class="grid2">
+        <div><label>Loaded miles *</label><input id="nl_loaded" type="number" min="0" placeholder="e.g. 480"></div>
+        <div><label>Deadhead miles</label><input id="nl_dead" type="number" min="0" placeholder="e.g. 60"></div>
+      </div>
+      <label>Rate type</label>
+      <div class="rowradio">
+        <label><input type="radio" name="nl_rateType" value="flat" checked> Flat rate ($)</label>
+        <label><input type="radio" name="nl_rateType" value="permile"> Per mile ($/mi × loaded)</label>
+      </div>
+      <div class="grid2">
+        <div id="nl_rateWrap"><label>Rate offered ($) *</label><input id="nl_rate" type="number" min="0" step="0.01" placeholder="e.g. 1150"></div>
+        <div id="nl_rpmWrap" style="display:none"><label>Rate per loaded mile ($/mi) *</label><input id="nl_ratePerMile" type="number" min="0" step="0.01" placeholder="e.g. 2.40"></div>
+      </div>
+      <label>Notes</label>
+      <textarea id="nl_notes" rows="3" placeholder="Tarp required? Appointment times? Detention terms?"></textarea>
+      <button class="btn primary big" id="btnSaveLoad" style="margin-top:14px">💾 Save Load</button>
+    </div>
+
+    <div class="panel" style="margin-top:0;position:sticky;top:86px">
+      <h3>Live load preview</h3>
+      <div class="kv"><span class="k">Rate per loaded mile</span><span class="v" id="p_rpm">—</span></div>
+      <div class="kv"><span class="k">Deadhead-adjusted RPM</span><span class="v" id="p_dhrpm">—</span></div>
+      <div class="kv"><span class="k">Est. cost (total mi × CPM)</span><span class="v" id="p_cost">—</span></div>
+      <div class="kv"><span class="k">Net profit</span><span class="v" id="p_net">—</span></div>
+      <div class="kv" id="p_qpRow" style="display:none"><span class="k">Net after quick-pay fee</span><span class="v" id="p_qpnet">—</span></div>
+      <div class="kv"><span class="k">Your minimum RPM</span><span class="v" id="p_min">—</span></div>
+      <div class="verdict bad" id="p_verdict">🚫 BELOW BREAK-EVEN — SKIP<small id="p_reason">Enter the load details to see the verdict.</small></div>
+      <div id="p_map" class="sub"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COST SETTINGS ============ -->
+<section class="tabpane" id="tab-settings">
+  <h2>Cost Settings</h2>
+  <div class="newgrid">
+    <div class="panel" style="margin-top:0">
+      <h3>Variable costs</h3>
+      <div class="grid2">
+        <div><label>Fuel price ($/gal)</label><input id="s_fuel" type="number" min="0" step="0.01"></div>
+        <div><label>Truck MPG</label><input id="s_mpg" type="number" min="1" step="0.1"></div>
+      </div>
+      <h3 style="margin-top:18px">Fixed monthly costs ($/month)</h3>
+      <div class="grid2">
+        <div><label>Truck payment</label><input id="s_truck" type="number" min="0" step="1"></div>
+        <div><label>Insurance</label><input id="s_ins" type="number" min="0" step="1"></div>
+        <div><label>Maintenance reserve</label><input id="s_maint" type="number" min="0" step="1"></div>
+        <div><label>ELD + load board + phone</label><input id="s_eld" type="number" min="0" step="1"></div>
+        <div><label>Permits / tolls / scales</label><input id="s_permits" type="number" min="0" step="1"></div>
+      </div>
+      <div><label>Monthly miles we plan to run</label><input id="s_miles" type="number" min="1" step="100"></div>
+      <h3 style="margin-top:18px">Minimum acceptable RPM</h3>
+      <div class="rowradio" style="margin-bottom:10px">
+        <label><input type="radio" name="s_minAuto" value="1" checked> Auto (CPM × 1.35)</label>
+        <label><input type="radio" name="s_minAuto" value="0"> Manual</label>
+      </div>
+      <div><label>Minimum acceptable RPM ($/mi deadhead-adjusted)</label>
+        <input id="s_minRpm" type="number" min="0" step="0.01">
+        <div class="sub" style="margin-top:6px">Loads under this deadhead-adjusted RPM get flagged in the Loads tab.</div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:0;position:sticky;top:86px">
+      <h3>Cost per mile breakdown</h3>
+      <div style="text-align:center;margin-bottom:10px">
+        <div class="sub">COST PER MILE</div>
+        <div class="cpmhuge" id="s_cpm">$0.000</div>
+      </div>
+      <div class="breakdown" id="s_breakdown"></div>
+      <div style="margin-top:14px" class="kv"><span class="k">Minimum acceptable RPM</span><span class="v" id="s_minShow">—</span></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ DETAIL MODAL ============ -->
+<div class="modalback" id="modalBack">
+  <div class="modal">
+    <h2>Edit Load <button class="btn" id="btnCloseModal">✕ Close</button></h2>
+    <div id="m_brokerLine" style="margin-bottom:10px"></div>
+    <div class="grid2">
+      <div><label>Broker name</label><input id="m_broker"></div>
+      <div><label>MC #</label><input id="m_mc"></div>
+      <div><label>Broker score (0–100)</label>
+        <div class="sliderrow">
+          <input type="range" id="m_score" min="0" max="100" value="70">
+          <div class="scorebig" id="m_scoreBig">70</div>
+        </div>
+      </div>
+      <div><label>Days to pay</label><input id="m_days" type="number" min="0"></div>
+      <div><label>Pickup city</label><input id="m_puCity"></div>
+      <div><label>Pickup state</label><input id="m_puState"></div>
+      <div><label>Dropoff city</label><input id="m_doCity"></div>
+      <div><label>Dropoff state</label><input id="m_doState"></div>
+      <div><label>Loaded miles</label><input id="m_loaded" type="number" min="0"></div>
+      <div><label>Deadhead miles</label><input id="m_dead" type="number" min="0"></div>
+    </div>
+    <label>Rate type</label>
+    <div class="rowradio">
+      <label><input type="radio" name="m_rateType" value="flat"> Flat rate ($)</label>
+      <label><input type="radio" name="m_rateType" value="permile"> Per mile ($/mi × loaded)</label>
+    </div>
+    <div class="grid2">
+      <div id="m_rateWrap"><label>Rate offered ($)</label><input id="m_rate" type="number" min="0" step="0.01"></div>
+      <div id="m_rpmWrap" style="display:none"><label>Rate per loaded mile ($/mi)</label><input id="m_ratePerMile" type="number" min="0" step="0.01"></div>
+      <div><label>Status</label><select id="m_status"></select></div>
+      <div><label>Quick pay fee %</label><input id="m_qpPct" type="number" min="0" max="100" step="0.5"></div>
+    </div>
+    <div class="rowradio" style="margin-top:4px">
+      <label><input type="checkbox" id="m_quickPay"> Quick pay enabled</label>
+    </div>
+    <label>Notes</label><textarea id="m_notes" rows="3"></textarea>
+
+    <div class="panel" style="margin:14px 0 0;padding:12px">
+      <h3>Live numbers</h3>
+      <div class="kv"><span class="k">Rate / loaded mi</span><span class="v" id="mc_rpm">—</span></div>
+      <div class="kv"><span class="k">Deadhead-adj RPM</span><span class="v" id="mc_dhrpm">—</span></div>
+      <div class="kv"><span class="k">Est. cost</span><span class="v" id="mc_cost">—</span></div>
+      <div class="kv"><span class="k">Net profit</span><span class="v" id="mc_net">—</span></div>
+      <div class="kv" id="mc_qpRow" style="display:none"><span class="k">Net after quick-pay fee</span><span class="v" id="mc_qpnet">—</span></div>
+    </div>
+    <div class="mbtns">
+      <button class="btn danger" id="btnDeleteLoad">🗑 Delete Load</button>
+      <button class="btn primary" id="btnSaveModal">💾 Done (changes saved automatically)</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ============ STATE ============ */
+const LS_LOADS='hslm_loads_v1', LS_SET='hslm_settings_v1', LS_INIT='hslm_init_v1';
+const STATUSES=['Browsing','Quoted','Booked','In Transit','Delivered','Paid'];
+const DEFAULTS={fuel:3.80,mpg:9,truck:900,ins:650,maint:300,eld:150,permits:200,miles:10000,minAuto:1,minRpmManual:0.87};
+let loads=[], settings={...DEFAULTS}, editId=null;
+const $=id=>document.getElementById(id);
+const money=v=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(+v||0);
+const rpm=v=>(isFinite(v)&&v?'$'+(+v).toFixed(2):'—');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ============ SAMPLE DATA ============ */
+function sampleLoads(){
+  const now=Date.now();
+  return [
+    {id:'sample1',isSample:true,broker:'Ryder Logistics',mc:'MC123456',score:88,days:21,
+     puCity:'Houston',puState:'TX',doCity:'Dallas',doState:'TX',loadedMiles:480,deadheadMiles:60,
+     rateType:'flat',rate:1150,ratePerMile:null,quickPay:true,quickPayPct:3,status:'Paid',
+     notes:'Great broker, pays fast. Sample load — profitable.',createdAt:now},
+    {id:'sample2',isSample:true,broker:'Sunbelt Freight',mc:'MC765432',score:65,days:35,
+     puCity:'Oklahoma City',puState:'OK',doCity:'Memphis',doState:'TN',loadedMiles:520,deadheadMiles:40,
+     rateType:'flat',rate:365,ratePerMile:null,quickPay:false,quickPayPct:0,status:'Booked',
+     notes:'Right at break-even. Sample load.',createdAt:now},
+    {id:'sample3',isSample:true,broker:'Lowball Logistics',mc:'MC111222',score:35,days:60,
+     puCity:'Denver',puState:'CO',doCity:'Wichita',doState:'KS',loadedMiles:220,deadheadMiles:120,
+     rateType:'flat',rate:200,ratePerMile:null,quickPay:false,quickPayPct:0,status:'Quoted',
+     notes:'Long deadhead, cheap rate. Sample load — losing money.',createdAt:now}
+  ];
+}
+
+/* ============ PERSISTENCE ============ */
+function saveAll(){ try{ localStorage.setItem(LS_LOADS,JSON.stringify(loads)); }catch(e){} }
+function saveSet(){ try{ localStorage.setItem(LS_SET,JSON.stringify(settings)); }catch(e){} }
+function loadState(){
+  try{ const s=localStorage.getItem(LS_SET); if(s) settings={...DEFAULTS,...JSON.parse(s)}; }catch(e){}
+  try{
+    const l=localStorage.getItem(LS_LOADS); if(l) loads=JSON.parse(l)||[];
+  }catch(e){ loads=[]; }
+  // migration: very old saves used `loaded`/`dead` keys
+  let fixed=false;
+  loads=loads.map(l=>{
+    if(l&&l.loadedMiles===undefined&&l.loaded!==undefined){
+      l.loadedMiles=+l.loaded||0; l.deadheadMiles=+l.dead||0;
+      delete l.loaded; delete l.dead; fixed=true;
+    }
+    return l;
+  });
+  if(fixed)saveAll();
+  if(!localStorage.getItem(LS_INIT)){
+    loads=sampleLoads(); saveAll();
+    try{ localStorage.setItem(LS_INIT,'1'); }catch(e){}
+  }
+}
+
+/* ============ MATH ============ */
+function fixedMonthly(){ return (+settings.truck||0)+(+settings.ins||0)+(+settings.maint||0)+(+settings.eld||0)+(+settings.permits||0); }
+function cpm(){ const m=Math.max(1,+settings.miles||1); return fixedMonthly()/m + (+settings.fuel||0)/(Math.max(0.1,+settings.mpg||0.1)); }
+function minRpm(){ return settings.minAuto ? cpm()*1.35 : (+settings.minRpmManual||0); }
+function calc(l){
+  const loaded=Math.max(0,+l.loadedMiles||0), dead=Math.max(0,+l.deadheadMiles||0), total=loaded+dead;
+  const rate=l.rateType==='permile' ? (+l.ratePerMile||0)*loaded : (+l.rate||0);
+  const rpmLoaded=loaded?rate/loaded:0, dhRpm=total?rate/total:0;
+  const cost=total*cpm(), net=rate-cost;
+  const fee=l.quickPay?rate*(+l.quickPayPct||0)/100:0, netAfterFee=net-fee;
+  return {loaded,dead,total,rate,rpmLoaded,dhRpm,cost,net,fee,netAfterFee};
+}
+function scoreColor(s){ s=+s||0; return s<=59?'red':s<=79?'yellow':'green'; }
+function mapUrl(l){ return 'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(l.puCity+', '+l.puState)+'&destination='+encodeURIComponent(l.doCity+', '+l.doState); }
+
+/* ============ UI HELPERS ============ */
+function toast(msg,err){ const t=$('toast'); t.textContent=msg; t.className='show'+(err?' err':''); clearTimeout(t._h); t._h=setTimeout(()=>t.className='',2600); }
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+  document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));
+}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+
+/* ============ DASHBOARD ============ */
+function thisMonth(l){ const d=new Date(l.createdAt||Date.now()), n=new Date(); return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear(); }
+function renderDashboard(){
+  $('dashMonth').textContent=new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const done=loads.filter(l=>thisMonth(l)&&(l.status==='Delivered'||l.status==='Paid'));
+  const rev=done.reduce((s,l)=>s+calc(l).rate,0);
+  const miles=done.reduce((s,l)=>s+calc(l).total,0);
+  const cost=done.reduce((s,l)=>s+calc(l).cost,0);
+  const net=rev-cost;
+  const avgLoaded=done.reduce((s,l)=>s+calc(l).loaded,0);
+  const avgRpm=avgLoaded?rev/avgLoaded:0;
+  $('d_rev').textContent=money(rev); $('d_miles').textContent=miles.toLocaleString();
+  $('d_rpm').textContent=rpm(avgRpm); $('d_cost').textContent=money(cost);
+  const nEl=$('d_net'); nEl.textContent=money(net); nEl.className='v '+(net>=0?'green':'red');
+  $('d_count').textContent=done.length;
+
+  // rate health bar
+  const c=cpm(), maxV=Math.max(avgRpm,c)*1.25||1;
+  const fill=$('rbFill'); fill.style.width=Math.min(100,avgRpm/maxV*100)+'%';
+  $('rbMarker').style.left=Math.min(99,(c/maxV*100))+'%';
+  $('rbAvg').textContent=rpm(avgRpm); $('rbCpm').textContent=rpm(c);
+  const v=$('rbVerdict');
+  if(avgRpm>=c){ v.innerHTML='<span style="color:var(--green)">🟢 ABOVE break-even — averaging '+rpm(avgRpm-c)+' over cost per mile</span>'; }
+  else if(avgRpm>0){ v.innerHTML='<span style="color:var(--red)">🔴 BELOW break-even — losing '+rpm(c-avgRpm)+' per mile on average</span>'; }
+  else { v.innerHTML='<span class="sub">No completed loads this month yet.</span>'; }
+
+  // best loads
+  const monthLoads=loads.filter(thisMonth).map(l=>({l,c:calc(l)})).sort((a,b)=>b.c.net-a.c.net).slice(0,5);
+  $('d_best').innerHTML=monthLoads.length?monthLoads.map(({l,c})=>
+    `<tr class="lrow" data-id="${l.id}"><td>${esc(l.broker)} ${scorePill(l.score)}</td>
+     <td><a href="${mapUrl(l)}" target="_blank" rel="noopener">${esc(l.puCity)},${esc(l.puState)} → ${esc(l.doCity)},${esc(l.doState)}</a></td>
+     <td>${money(c.rate)}</td><td><b>${rpm(c.dhRpm)}</b></td>
+     <td><span class="badge ${c.net>=0?'g':'r'}">${c.net>=0?'+':'−'}${money(Math.abs(c.net))}</span></td>
+     <td class="mut">${esc(l.status)}</td></tr>`).join('')
+    :'<tr><td colspan="6" class="mut">No loads this month yet.</td></tr>';
+  $('d_best').querySelectorAll('tr.lrow').forEach(tr=>tr.addEventListener('click',()=>openDetail(tr.dataset.id)));
+}
+function scorePill(s){ const c=scoreColor(s); const lbl=s==null||s===''?'—':s; return ` <span class="pill ${c}">${lbl}</span>`; }
+
+/* ============ LOADS TABLE ============ */
+const SORTS={broker:l=>l.broker.toLowerCase(),route:l=>(l.puCity+l.puState).toLowerCase(),total:l=>calc(l).total,
+  rate:l=>calc(l).rate,rpm:l=>calc(l).rpmLoaded,dhrpm:l=>calc(l).dhRpm,cost:l=>calc(l).cost,
+  net:l=>calc(l).net,status:l=>STATUSES.indexOf(l.status),score:l=>+l.score||0};
+let sortKey='createdAt',sortDir=-1;
+function renderLoads(){
+  const q=$('f_search').value.trim().toLowerCase(), st=$('f_status').value, sc=$('f_score').value, minR=parseFloat($('f_minrpm').value);
+  const min=minRpm(), c=cpm();
+  let list=loads.filter(l=>{
+    if(st!=='all'&&l.status!==st)return false;
+    if(sc!=='all'&&scoreColor(l.score)!==sc)return false;
+    if(!isNaN(minR)&&calc(l).dhRpm<minR)return false;
+    if(q){ const hay=(l.broker+' '+(l.mc||'')+' '+l.puCity+' '+l.puState+' '+l.doCity+' '+l.doState+' '+(l.notes||'')).toLowerCase(); if(!hay.includes(q))return false; }
+    return true;
+  }).sort((a,b)=>{ const f=SORTS[sortKey]; let va=sortKey==='createdAt'?a.createdAt:f(a), vb=sortKey==='createdAt'?b.createdAt:f(b);
+    return (va<vb?-1:va>vb?1:0)*sortDir; });
+
+  document.querySelectorAll('th[data-sort]').forEach(th=>{
+    th.innerHTML=th.textContent.replace(/ [▲▼]$/,'')+(th.dataset.sort===sortKey?(sortDir>0?' ▲':' ▼'):'');
+  });
+  $('f_count').textContent=list.length+' of '+loads.length+' loads shown · CPM '+rpm(c)+' · min RPM '+rpm(min);
+
+  $('loadsBody').innerHTML=list.length?list.map(l=>{
+    const c2=calc(l), col=scoreColor(l.score);
+    const netBadge=c2.net>=0?`<span class="badge g">+${money(c2.net)}</span>`:`<span class="badge r">−${money(Math.abs(c2.net))}</span>`;
+    const flag=c2.net<0?`<span class="flag">❌ BELOW BREAK-EVEN</span>`:(c2.dhRpm<min?`<span class="flag warn">⚠️ UNDER MIN RPM</span>`:'');
+    const qp=c2.fee>0?`<span class="mut">−${money(c2.fee)} fee</span><br><span class="badge ${c2.netAfterFee>=0?'g':'r'}">${money(c2.netAfterFee)}</span>`:'<span class="mut">—</span>';
+    const opts=STATUSES.map(s=>`<option${s===l.status?' selected':''}>${s}</option>`).join('');
+    return `<tr class="lrow" data-id="${l.id}">
+      <td><b>${esc(l.broker)}</b>${l.isSample?' <span class="pill gray">sample</span>':''}<br><span class="mut">${esc(l.mc||'')}</span><br>${scorePill(l.score)}${l.days?` <span class="mut">${l.days}d to pay</span>`:''}</td>
+      <td><a href="${mapUrl(l)}" target="_blank" rel="noopener" class="routeLink">${esc(l.puCity)},${esc(l.puState)} → ${esc(l.doCity)},${esc(l.doState)}</a></td>
+      <td>${c2.loaded.toLocaleString()} <span class="mut">+ ${c2.dead.toLocaleString()} =</span> <b>${c2.total.toLocaleString()}</b></td>
+      <td>${money(c2.rate)}${l.rateType==='permile'?'<br><span class="mut">per-mile</span>':''}</td>
+      <td>${rpm(c2.rpmLoaded)}</td>
+      <td><b style="font-size:18px">${rpm(c2.dhRpm)}</b></td>
+      <td class="mut">${money(c2.cost)}</td>
+      <td>${netBadge}${flag}</td>
+      <td><select class="rowStatus">${opts}</select></td>
+      <td>${qp}</td>
+      <td>${l.notes?'📝':'<span class="mut">—</span>'}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="11" class="mut" style="text-align:center;padding:30px">No loads match. Add one in the New Load tab.</td></tr>';
+
+  $('loadsBody').querySelectorAll('tr.lrow').forEach(tr=>{
+    tr.addEventListener('click',e=>{
+      if(e.target.closest('select,a,input'))return;
+      openDetail(tr.dataset.id);
+    });
+    const sel=tr.querySelector('.rowStatus');
+    sel.addEventListener('click',e=>e.stopPropagation());
+    sel.addEventListener('change',()=>{ const l=loads.find(x=>x.id===tr.dataset.id); if(l){l.status=sel.value;saveAll();renderAll();toast('Status: '+sel.value);} });
+  });
+}
+document.querySelectorAll('th[data-sort]').forEach(th=>th.addEventListener('click',()=>{
+  const k=th.dataset.sort; if(sortKey===k)sortDir*=-1; else{sortKey=k;sortDir=1;} renderLoads();
+}));
+['f_search','f_status','f_minrpm','f_score'].forEach(id=>$(id).addEventListener('input',renderLoads));
+
+/* ============ DETAIL MODAL ============ */
+function fillStatusSelect(sel){ sel.innerHTML=STATUSES.map(s=>`<option>${s}</option>`).join(''); }
+fillStatusSelect($('m_status')); fillStatusSelect($('f_status')); fillStatusSelect($('m_status'));
+function openDetail(id){
+  const l=loads.find(x=>x.id===id); if(!l)return; editId=id;
+  $('m_broker').value=l.broker||''; $('m_mc').value=l.mc||''; $('m_score').value=+l.score||0;
+  $('m_scoreBig').textContent=$('m_score').value; colorScoreBig($('m_scoreBig'),+l.score||0);
+  $('m_days').value=l.days||''; $('m_puCity').value=l.puCity||''; $('m_puState').value=l.puState||'';
+  $('m_doCity').value=l.doCity||''; $('m_doState').value=l.doState||'';
+  $('m_loaded').value=l.loadedMiles||''; $('m_dead').value=l.deadheadMiles||'';
+  document.querySelectorAll('input[name=m_rateType]').forEach(r=>r.checked=r.value===(l.rateType||'flat'));
+  $('m_rateWrap').style.display=(l.rateType==='permile')?'none':'block';
+  $('m_rpmWrap').style.display=(l.rateType==='permile')?'block':'none';
+  $('m_rate').value=l.rate??''; $('m_ratePerMile').value=l.ratePerMile??'';
+  $('m_status').value=l.status||'Browsing'; $('m_quickPay').checked=!!l.quickPay;
+  $('m_qpPct').value=l.quickPayPct||''; $('m_notes').value=l.notes||'';
+  $('m_brokerLine').innerHTML=`<b>Created ${new Date(l.createdAt||Date.now()).toLocaleDateString()}</b> · <a href="${mapUrl(l)}" target="_blank" rel="noopener">Open in Google Maps ↗</a>`;
+  updateModalCalc();
+  $('modalBack').classList.add('open');
+}
+function closeModal(){ $('modalBack').classList.remove('open'); editId=null; renderAll(); }
+$('btnCloseModal').addEventListener('click',closeModal);
+$('btnSaveModal').addEventListener('click',closeModal);
+$('btnDeleteLoad').addEventListener('click',()=>{
+  if(!editId)return; if(!confirm('Delete this load?'))return;
+  loads=loads.filter(l=>l.id!==editId); saveAll(); closeModal(); toast('Load deleted');
+});
+function modalToLoad(l){
+  l.broker=$('m_broker').value.trim(); l.mc=$('m_mc').value.trim(); l.score=+$('m_score').value||0; l.days=+$('m_days').value||0;
+  l.puCity=$('m_puCity').value.trim(); l.puState=$('m_puState').value.trim();
+  l.doCity=$('m_doCity').value.trim(); l.doState=$('m_doState').value.trim();
+  l.loadedMiles=+$('m_loaded').value||0; l.deadheadMiles=+$('m_dead').value||0;
+  l.rateType=document.querySelector('input[name=m_rateType]:checked').value;
+  l.rate=+$('m_rate').value||0; l.ratePerMile=+$('m_ratePerMile').value||0;
+  l.status=$('m_status').value; l.quickPay=$('m_quickPay').checked; l.quickPayPct=+$('m_qpPct').value||0;
+  l.notes=$('m_notes').value;
+}
+function updateModalCalc(){
+  const l=loads.find(x=>x.id===editId); if(!l)return;
+  modalToLoad(l); const c=calc(l), min=minRpm();
+  $('mc_rpm').textContent=rpm(c.rpmLoaded); $('mc_dhrpm').textContent=rpm(c.dhRpm);
+  $('mc_cost').textContent=money(c.cost);
+  const n=$('mc_net'); n.textContent=(c.net>=0?'+':'−')+money(Math.abs(c.net)); n.className='v '+(c.net>=0?'g':'r');
+  $('mc_qpRow').style.display=c.fee>0?'flex':'none';
+  if(c.fee>0){ const q=$('mc_qpnet'); q.textContent=(c.netAfterFee>=0?'+':'−')+money(Math.abs(c.netAfterFee)); q.className='v '+(c.netAfterFee>=0?'g':'r'); }
+  saveAll(); // live-persist edits
+}
+['m_broker','m_mc','m_score','m_days','m_puCity','m_puState','m_doCity','m_doState','m_loaded','m_dead',
+ 'm_rate','m_ratePerMile','m_status','m_quickPay','m_qpPct','m_notes'].forEach(id=>$(id).addEventListener('input',()=>{ if(id==='m_score'){ $('m_scoreBig').textContent=$('m_score').value; colorScoreBig($('m_scoreBig'),+$('m_score').value); } updateModalCalc(); }));
+document.querySelectorAll('input[name=m_rateType]').forEach(r=>r.addEventListener('change',()=>{
+  const perMile=document.querySelector('input[name=m_rateType]:checked').value==='permile';
+  $('m_rateWrap').style.display=perMile?'none':'block'; $('m_rpmWrap').style.display=perMile?'block':'none'; updateModalCalc();
+}));
+function colorScoreBig(el,s){ el.style.background={red:'var(--redbg)',yellow:'var(--yellowbg)',green:'var(--greenbg)'}[scoreColor(s)]; el.style.color={red:'var(--red)',yellow:'var(--yellow)',green:'var(--green)'}[scoreColor(s)]; }
+
+/* ============ NEW LOAD FORM ============ */
+function nlObj(){
+  return {
+    broker:$('nl_broker').value.trim(), mc:$('nl_mc').value.trim(), score:+$('nl_score').value||0, days:+$('nl_days').value||0,
+    puCity:$('nl_puCity').value.trim(), puState:$('nl_puState').value.trim(),
+    doCity:$('nl_doCity').value.trim(), doState:$('nl_doState').value.trim(),
+    loadedMiles:+$('nl_loaded').value||0, deadheadMiles:+$('nl_dead').value||0,
+    rateType:document.querySelector('input[name=nl_rateType]:checked').value,
+    rate:+$('nl_rate').value||0, ratePerMile:+$('nl_ratePerMile').value||0,
+    quickPay:+$('nl_qpPct').value>0, quickPayPct:+$('nl_qpPct').value||0,
+    notes:$('nl_notes').value.trim()
+  };
+}
+function updateNewPreview(){
+  const l=nlObj(), c=calc(l), min=minRpm();
+  $('p_rpm').textContent=rpm(c.rpmLoaded); $('p_dhrpm').textContent=rpm(c.dhRpm);
+  $('p_cost').textContent=money(c.cost);
+  const n=$('p_net'); n.textContent=(c.net>=0?'+':'−')+money(Math.abs(c.net)); n.className='v '+(c.net>=0?'g':'r');
+  $('p_qpRow').style.display=c.fee>0?'flex':'none';
+  if(c.fee>0){ const q=$('p_qpnet'); q.textContent=(c.netAfterFee>=0?'+':'−')+money(Math.abs(c.netAfterFee)); q.className='v '+(c.netAfterFee>=0?'g':'r'); }
+  $('p_min').textContent=rpm(min);
+  const v=$('p_verdict');
+  if(c.total===0||c.rate===0){ v.className='verdict bad'; v.innerHTML='🚫 BELOW BREAK-EVEN — SKIP<small>Enter miles and rate to see the real verdict.</small>'; }
+  else if(c.net<0){ v.className='verdict bad'; v.innerHTML='🚫 BELOW BREAK-EVEN — SKIP<small>Lost '+money(Math.abs(c.net))+' after est. cost of '+money(c.cost)+' · only '+rpm(c.dhRpm)+'/mi vs cost '+rpm(cpm())+'/mi</small>'; }
+  else if(c.dhRpm<min){ v.className='verdict meh'; v.innerHTML='⚠️ MARGINAL — THINK TWICE<small>Above break-even but under your '+rpm(min)+'/mi minimum. Negotiate or pass.</small>'; }
+  else { v.className='verdict good'; v.innerHTML='✅ TAKE IT<small>'+money(c.net)+' profit · '+rpm(c.dhRpm)+'/mi is '+rpm(c.dhRpm-min)+' over your minimum</small>'; }
+  const hasGeo=l.puCity&&l.doCity;
+  $('p_map').innerHTML=hasGeo?`<a href="${mapUrl(l)}" target="_blank" rel="noopener">🗺 ${esc(l.puCity)},${esc(l.puState)} → ${esc(l.doCity)},${esc(l.doState)} — open directions ↗</a>`:'<span class="mut">Enter pickup + dropoff cities for a map link.</span>';
+  colorScoreBig($('nl_scoreBig'),l.score);
+}
+$('tab-new').addEventListener('input',()=>{ $('nl_scoreBig').textContent=$('nl_score').value; updateNewPreview(); });
+$('tab-new').addEventListener('change',e=>{
+  if(e.target.name==='nl_rateType'){ const perMile=e.target.value==='permile';
+    $('nl_rateWrap').style.display=perMile?'none':'block'; $('nl_rpmWrap').style.display=perMile?'block':'none'; }
+  updateNewPreview();
+});
+$('btnSaveLoad').addEventListener('click',()=>{
+  const l=nlObj(); let ok=true;
+  [['nl_broker',l.broker],['nl_loaded',l.loadedMiles>0],['nl_rate',l.rateType==='flat'?l.rate>0:l.ratePerMile>0]].forEach(([id,valid])=>{
+    $(id).classList.toggle('invalid',!valid); if(!valid)ok=false;
+  });
+  if(!ok){ toast('Fill in broker, loaded miles and rate first',true); return; }
+  l.id='L'+Date.now()+Math.floor(Math.random()*999); l.createdAt=Date.now(); l.status='Browsing';
+  loads.push(l); saveAll();
+  ['nl_broker','nl_mc','nl_days','nl_puCity','nl_puState','nl_doCity','nl_doState','nl_loaded','nl_dead','nl_rate','nl_ratePerMile','nl_qpPct','nl_notes'].forEach(id=>$(id).value='');
+  $('nl_score').value=70; $('nl_scoreBig').textContent='70'; colorScoreBig($('nl_scoreBig'),70);
+  updateNewPreview(); renderAll(); toast('✅ Load saved — added to Loads (Browsing)');
+});
+
+/* ============ COST SETTINGS ============ */
+function readSettings(){
+  settings.fuel=+$('s_fuel').value||0; settings.mpg=+$('s_mpg').value||1;
+  settings.truck=+$('s_truck').value||0; settings.ins=+$('s_ins').value||0;
+  settings.maint=+$('s_maint').value||0; settings.eld=+$('s_eld').value||0;
+  settings.permits=+$('s_permits').value||0; settings.miles=+$('s_miles').value||1;
+  settings.minAuto=+document.querySelector('input[name=s_minAuto]:checked').value;
+  settings.minRpmManual=+$('s_minRpm').value||0;
+  saveSet(); renderSettingsOutputs(); renderAll();
+}
+function renderSettingsOutputs(){
+  const c=cpm(), min=minRpm(), fx=fixedMonthly();
+  $('s_cpm').textContent='$'+c.toFixed(3);
+  $('s_breakdown').textContent=
+    'Fixed: '+money(settings.truck)+' + '+money(settings.ins)+' + '+money(settings.maint)+' + '+money(settings.eld)+' + '+money(settings.permits)+' = '+money(fx)+' /month\n'
+   +money(fx)+' ÷ '+(+settings.miles||0).toLocaleString()+' planned miles = $'+(fx/Math.max(1,+settings.miles||1)).toFixed(3)+'/mi\n'
+   +'Fuel: '+money(settings.fuel)+' ÷ '+(+settings.mpg||0)+' MPG = $'+((+settings.fuel||0)/Math.max(0.1,+settings.mpg||0.1)).toFixed(3)+'/mi\n'
+   +'────────────────\nCOST PER MILE = $'+c.toFixed(3)+'/mi\n'
+   +'Min RPM = $'+c.toFixed(3)+' × 1.35 = $'+(c*1.35).toFixed(3)+'/mi';
+  $('s_minShow').textContent=rpm(min);
+  $('s_minRpm').disabled=!!settings.minAuto;
+  if(settings.minAuto)$('s_minRpm').value=(c*1.35).toFixed(2);
+  if(!settings.minAuto&&!$('s_minRpm').value)$('s_minRpm').value=settings.minRpmManual||'';
+}
+$('tab-settings').addEventListener('input',readSettings);
+$('tab-settings').addEventListener('change',readSettings);
+
+/* ============ EXPORT CSV / CLEAR SAMPLES ============ */
+$('btnCsv').addEventListener('click',()=>{
+  if(!loads.length){ toast('No loads to export',true); return; }
+  const cols=['Broker','MC','Score','DaysToPay','Pickup','Dropoff','LoadedMiles','DeadheadMiles','TotalMiles','Rate','RatePerLoadedMile','DeadheadAdjRPM','EstCost','NetProfit','Status','QuickPay','QuickPayFeePct','NetAfterFee','Notes','Created'];
+  const q=v=>{ v=v==null?'':String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+  const rows=loads.map(l=>{ const c=calc(l); return [l.broker,l.mc,l.score,l.days,l.puCity+', '+l.puState,l.doCity+', '+l.doState,
+    c.loaded,c.dead,c.total,c.rate,l.rateType==='permile'?c.rpmLoaded:'',c.dhRpm,c.cost,c.net,l.status,l.quickPay?'yes':'no',l.quickPayPct||'',l.quickPay?c.netAfterFee:'',l.notes,
+    new Date(l.createdAt||Date.now()).toLocaleDateString()].map(q).join(','); });
+  const csv=[cols.map(q).join(','),...rows].join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv'}));
+  a.download='hot-shot-loads-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click(); URL.revokeObjectURL(a.href); toast('CSV exported ('+loads.length+' loads)');
+});
+$('btnClearSamples').addEventListener('click',()=>{
+  const n=loads.filter(l=>l.isSample).length;
+  if(!n){ toast('No sample loads to clear',true); return; }
+  if(!confirm('Remove the '+n+' sample load(s)? Your own loads are kept.'))return;
+  loads=loads.filter(l=>!l.isSample); saveAll(); renderAll(); toast('Sample data cleared');
+});
+
+/* ============ IMPORT (from Lead Viewer's load-manager-import.json) ============ */
+$('btnImport').addEventListener('click',()=>$('fileImport').click());
+$('fileImport').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    let items;
+    try{ items=JSON.parse(r.result); }catch(err){ toast('Not a valid JSON import file',true); return; }
+    if(!Array.isArray(items)){ if(items&&Array.isArray(items.leads))items=items.leads; else { toast('No leads found in file',true); return; } }
+    let n=0;
+    items.forEach(o=>{
+      if(!o||typeof o!=='object')return;
+      let id=(o.id&&!loads.some(l=>l.id===o.id))?String(o.id):('I'+Date.now()+Math.floor(Math.random()*9999)+n);
+      loads.push({
+        id, isSample:false,
+        broker:String(o.broker||'Imported lead'), mc:String(o.mc||''),
+        score:Math.min(100,Math.max(0,+o.score||60)), days:Math.max(0,+o.days||0),
+        puCity:String(o.puCity||''), puState:String(o.puState||''),
+        doCity:String(o.doCity||''), doState:String(o.doState||''),
+        loadedMiles:Math.max(0,+o.loadedMiles||0), deadheadMiles:Math.max(0,+o.deadheadMiles||0),
+        rateType:(o.rateType==='permile'?'permile':'flat'), rate:+o.rate||0, ratePerMile:+o.ratePerMile||0,
+        quickPay:!!o.quickPay, quickPayPct:Math.max(0,+o.quickPayPct||0),
+        status:STATUSES.includes(o.status)?o.status:'Browsing',
+        notes:String(o.notes||''), createdAt:+o.createdAt||Date.now()
+      });
+      n++;
+    });
+    saveAll(); renderAll(); showTab('loads');
+    $('fileImport').value='';
+    toast(n?`✅ Imported ${n} load(s) from the Lead Viewer`:'Nothing to import in that file', !n);
+  };
+  r.readAsText(f);
+});
+
+/* ============ INIT ============ */
+function renderAll(){ renderDashboard(); renderLoads(); updateNewPreview(); renderSettingsOutputs(); }
+function init(){
+  // restore settings into inputs
+  $('s_fuel').value=settings.fuel; $('s_mpg').value=settings.mpg; $('s_truck').value=settings.truck;
+  $('s_ins').value=settings.ins; $('s_maint').value=settings.maint; $('s_eld').value=settings.eld;
+  $('s_permits').value=settings.permits; $('s_miles').value=settings.miles;
+  document.querySelectorAll('input[name=s_minAuto]').forEach(r=>r.checked=+r.value===+settings.minAuto);
+  $('s_minRpm').value=settings.minRpmManual||'';
+  renderAll();
+}
+loadState(); init();
+</script>
+</body>
+</html>

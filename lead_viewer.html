@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Santi's Hot Shots — Lead Viewer</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="96x96" href="assets/favicon-96x96.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="assets/site.webmanifest">
+<meta name="theme-color" content="#1B2A4A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* ===== Santi's Hot Shots brand tokens — defined ONCE, referenced everywhere ===== */
+  --navy-900:#0D1526;          /* page background          */
+  --navy-800:#14203A;          /* cards / panels           */
+  --navy-700:#1B2A4A;          /* raised surfaces, inputs  */
+  --navy-border:#2B3D63;       /* hairlines                */
+  --gold:#C9A227;              /* primary accent           */
+  --gold-2:#E3B33C;            /* lighter gold (links)     */
+  --flame:#E8631A;             /* secondary accent         */
+  --red-orange:#D94F2B;        /* danger / hot             */
+  --green:#7FB069;             /* money-positive           */
+  --yellow:#E5A93D;            /* warning / marginal       */
+  --text:#F4F1E8;              /* off-white body text      */
+  --muted:#98A6C4;
+  /* aliases used across the app CSS */
+  --bg:var(--navy-900); --panel:var(--navy-800); --panel2:var(--navy-700);
+  --border:var(--navy-border); --accent:var(--gold); --accent2:var(--gold-2);
+  --red:var(--red-orange);
+  --greenbg:rgba(127,176,105,.16); --redbg:rgba(217,79,43,.18); --yellowbg:rgba(229,169,61,.18);
+  --font-head:'Oswald','Arial Narrow',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:17px;line-height:1.45;-webkit-text-size-adjust:100%}
+button{font-family:inherit}
+input,select{font-family:inherit;font-size:17px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:10px 12px;width:100%}
+input:focus,select:focus{outline:2px solid var(--gold);outline-offset:1px}
+input[type=radio],input[type=checkbox]{accent-color:var(--gold)}
+label{display:block;font-size:14px;font-weight:600;color:var(--muted);margin:8px 0 4px}
+a{color:var(--accent2)}
+header{position:sticky;top:0;z-index:50;background:rgba(13,21,38,.95);backdrop-filter:blur(6px);border-bottom:2px solid var(--gold);padding:10px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);margin-right:6px}
+.brandlogo{height:44px;width:44px;border-radius:50%;box-shadow:0 0 0 2px var(--gold),0 2px 10px rgba(0,0,0,.5)}
+.brandname{font-family:var(--font-head);font-weight:700;font-size:22px;letter-spacing:.05em;white-space:nowrap;text-transform:uppercase;line-height:1.1}
+.brandname span{color:var(--gold)}
+.brandname em{font-style:normal;color:var(--muted);font-size:16px;font-weight:600;margin-left:8px}
+.brand:hover .brandlogo{box-shadow:0 0 0 2px var(--flame),0 0 14px rgba(232,99,26,.5)}
+.hbtns{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.btn{padding:10px 16px;border-radius:10px;border:1px solid var(--gold);background:var(--navy-800);color:var(--gold-2);font-weight:700;font-size:16px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--flame);color:var(--flame);box-shadow:0 0 14px rgba(232,99,26,.35)}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:var(--navy-800)}
+.btn.primary:hover{color:var(--navy-900);background:var(--gold-2);box-shadow:0 0 16px rgba(232,99,26,.4)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+main{padding:16px 14px 90px;max-width:1500px;margin:0 auto}
+h2{margin:4px 0 10px;font-size:26px;font-family:var(--font-head);font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
+#stale{display:none;margin:0 0 14px;background:var(--redbg);border:2px solid var(--red);color:var(--red);border-radius:14px;padding:16px 18px;font-weight:800;font-size:20px;text-align:center}
+#stale small{display:block;font-weight:600;font-size:15px;color:#F5B09A;margin-top:4px}
+#meta{margin:0 0 12px;color:var(--muted);font-size:15px}
+.fbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 14px;align-items:end;margin-bottom:14px}
+.fbar .chk{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:11px 12px;font-weight:700;font-size:16px;cursor:pointer;color:var(--text)}
+.fbar .chk input{width:auto}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:14px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:1240px}
+th,td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;font-size:16px}
+th{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.05em;background:var(--panel2);cursor:pointer;user-select:none;position:sticky;top:0}
+th:hover{color:var(--text)}
+td{vertical-align:middle}
+.mut{color:var(--muted)}
+.pill{display:inline-block;padding:5px 12px;border-radius:999px;font-weight:800;font-size:15px;line-height:1.2}
+.pill.red{background:var(--redbg);color:#F49B7A;border:1px solid #D94F2B66}
+.pill.yellow{background:var(--yellowbg);color:#F6CE6B;border:1px solid #E5A93D66}
+.pill.green{background:var(--greenbg);color:#B7DA9F;border:1px solid #7FB06966}
+.badge{display:inline-block;padding:3px 9px;border-radius:8px;font-weight:800;font-size:13px;background:var(--panel2);border:1px solid var(--border)}
+.fresh{background:var(--greenbg);color:var(--green);border-color:#7FB06966}
+.snip{white-space:normal;max-width:280px;min-width:220px;font-size:14px;color:var(--muted)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--gold);color:var(--navy-800);padding:12px 22px;border-radius:12px;font-weight:800;font-size:17px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:200;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+#toast.err{background:var(--red-orange);color:var(--text)}
+#empty{padding:40px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href="#" onclick="window.scrollTo(0,0);return false" title="Santi's Hot Shots">
+    <img class="brandlogo" src="assets/logo.png" alt="Santi's Hot Shots logo">
+    <span class="brandname">SANTI'S <span>Hot Shots</span><em>Lead Viewer</em></span>
+  </a>
+  <div class="hbtns">
+    <button class="btn primary" id="btnLoad">📂 Load leads.csv</button>
+    <button class="btn" id="btnDownload" disabled>⬇ Download import file (<span id="qCount">0</span>)</button>
+    <button class="btn" id="btnClearQ" disabled>Clear queue</button>
+    <input type="file" id="fileIn" accept=".csv" hidden>
+  </div>
+</header>
+
+<main>
+  <h2>Load Leads — NC departures</h2>
+
+  <div id="stale">⚠️ STALE DATA — these leads are more than 24 hours old<small>Loads like these get booked within hours. Re-run <b>scrape_leads.py</b> and reload the CSV before chasing anything.</small></div>
+
+  <div class="panel fbar">
+    <label class="chk"><input type="checkbox" id="f_nc" checked> NC departure only</label>
+    <label class="chk"><input type="checkbox" id="f_rate"> Rate posted only</label>
+    <div><label>Max distance (mi)</label><input id="f_maxmi" type="number" min="0" placeholder="e.g. 600"></div>
+    <div><label>Min rate/mile ($)</label><input id="f_minrpm" type="number" min="0" step="0.01" placeholder="e.g. 1.25"></div>
+    <div><label>Search</label><input id="f_search" placeholder="city, equipment, text…"></div>
+    <div><label>Source</label><select id="f_source"><option value="all">All sources</option></select></div>
+  </div>
+
+  <div id="meta">No leads loaded yet — click <b>📂 Load leads.csv</b> and pick the file written by <b>scrape_leads.py</b>.</div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th data-sort="score">Score</th>
+        <th data-sort="route">Origin → Destination</th>
+        <th>Rate</th>
+        <th data-sort="rpm">Rate/Mi</th>
+        <th data-sort="miles">Est. Miles</th>
+        <th>Equipment</th>
+        <th data-sort="posted">Posted</th>
+        <th data-sort="source">Source</th>
+        <th>Contact</th>
+        <th>Link</th>
+        <th>→ Load Manager</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty">Load a CSV to see leads here.</div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* Hot Shot Lead Viewer — reads leads.csv via file picker (no server needed).
+   "→ Load Manager" builds a row in the same format hot-shot-load-manager.html
+   imports, queues it in localStorage, and one click downloads
+   load-manager-import.json for the app's ⬆ Import button. */
+
+const $=id=>document.getElementById(id);
+const QUEUE_KEY='hslm_import_queue_v1';
+const money=v=>v?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(v):'—';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let leads=[], sortKey='score', sortDir=-1, queue=[];
+
+try{ queue=JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]')||[]; }catch(e){ queue=[]; }
+
+function toast(msg,err){ const t=$('toast'); t.textContent=msg; t.className='show'+(err?' err':'');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.className='',2600); }
+
+/* ---------- CSV parsing (handles quotes, embedded commas/newlines) ---------- */
+function parseCSV(text){
+  const rows=[]; let row=[], cur='', inQ=false;
+  text=text.replace(/^\ufeff/,'');
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(inQ){
+      if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else inQ=false; }
+      else cur+=ch;
+    }else if(ch==='"') inQ=true;
+    else if(ch===','){ row.push(cur); cur=''; }
+    else if(ch==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+    else if(ch!=='\r') cur+=ch;
+  }
+  if(cur!==''||row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r=>r.length>1||(r[0]&&r[0]!==''));
+}
+const normH=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
+
+function loadCSVText(text){
+  const rows=parseCSV(text);
+  if(!rows.length){ toast('That CSV looks empty',true); return; }
+  const head=rows[0].map(normH), H={};
+  head.forEach((h,i)=>H[h]=i);
+  const g=(r,k)=>{ const i=H[normH(k)]; return i==null?'':(r[i]||'').trim(); };
+  leads=rows.slice(1).map(r=>({
+    source:g(r,'source'), score:parseFloat(g(r,'score'))||0,
+    origin_city:g(r,'origin_city'), origin_state:g(r,'origin_state'),
+    dest_city:g(r,'dest_city'), dest_state:g(r,'dest_state'),
+    equipment_type:g(r,'equipment_type'),
+    hotshot_ok:g(r,'hotshot_ok').toLowerCase().startsWith('t')||g(r,'hotshot_ok').toLowerCase()==='true',
+    rate:parseFloat(g(r,'rate').replace(/[$,]/g,''))||null,
+    rate_note:g(r,'rate_note'), miles:parseFloat(g(r,'miles'))||null,
+    rate_per_mile:parseFloat(g(r,'rate_per_mile'))||null,
+    posted_at:g(r,'posted_at'), poster:g(r,'poster'), contact:g(r,'contact'),
+    url:g(r,'url'), snippet:g(r,'snippet'), scraped_at:g(r,'scraped_at')
+  })).filter(l=>l.origin_city||l.url);
+  // source dropdown
+  const sel=$('f_source'), cur=sel.value;
+  sel.innerHTML='<option value="all">All sources</option>'+
+    [...new Set(leads.map(l=>l.source).filter(Boolean))].sort()
+      .map(s=>`<option${s===cur?' selected':''}>${esc(s)}</option>`).join('');
+  // stale check: newest scraped_at on any row, 24h window
+  let newest=0;
+  leads.forEach(l=>{ const t=Date.parse(l.scraped_at); if(t>newest)newest=t; });
+  const stale=!newest||(Date.now()-newest)>24*3600*1000;
+  $('stale').style.display=stale&&leads.length?'block':'none';
+  const gen=newest?new Date(newest).toLocaleString():'unknown';
+  $('meta').textContent=`${leads.length} leads loaded · data scraped: ${gen}${stale?' · STALE (older than 24h)':' · fresh'}`;
+  render();
+  toast(leads.length+' leads loaded');
+}
+
+/* ---------- filters + sort ---------- */
+const SORTS={
+  score:l=>l.score, rpm:l=>l.rate_per_mile||0, miles:l=>l.miles||1e9,
+  posted:l=>Date.parse(l.posted_at)||0, source:l=>l.source,
+  route:l=>(l.origin_city+l.origin_state).toLowerCase()
+};
+function filtered(){
+  const nc=$('f_nc').checked, rp=$('f_rate').checked,
+        maxmi=parseFloat($('f_maxmi').value), minrpm=parseFloat($('f_minrpm').value),
+        q=$('f_search').value.trim().toLowerCase(), src=$('f_source').value;
+  return leads.filter(l=>{
+    if(nc&&l.origin_state.toUpperCase()!=='NC')return false;
+    if(rp&&l.rate==null)return false;
+    if(!isNaN(maxmi)&&(l.miles==null||l.miles>maxmi))return false;
+    if(!isNaN(minrpm)&&((l.rate_per_mile==null)||(l.rate_per_mile<minrpm)))return false;
+    if(src!=='all'&&l.source!==src)return false;
+    if(q){ const hay=(l.origin_city+' '+l.origin_state+' '+l.dest_city+' '+l.dest_state+' '
+      +l.equipment_type+' '+l.snippet+' '+l.poster+' '+l.contact).toLowerCase();
+      if(!hay.includes(q))return false; }
+    return true;
+  }).sort((a,b)=>{
+    let va=SORTS[sortKey](a), vb=SORTS[sortKey](b);
+    return (va<vb?-1:va>vb?1:0)*sortDir;
+  });
+}
+['f_nc','f_rate','f_maxmi','f_minrpm','f_search','f_source'].forEach(id=>{
+  $(id).addEventListener('input',render); $(id).addEventListener('change',render);
+});
+document.querySelectorAll('th[data-sort]').forEach(th=>th.addEventListener('click',()=>{
+  const k=th.dataset.sort; if(sortKey===k)sortDir*=-1; else{sortKey=k;sortDir=1;} render();
+}));
+
+/* ---------- rendering ---------- */
+function scorePill(s){
+  const c=s<=59?'red':s<=79?'yellow':'green';
+  return `<span class="pill ${c}">${Math.round(s)}</span>`;
+}
+function mapUrl(l){
+  const o=`${l.origin_city}, ${l.origin_state}`;
+  if(l.dest_city) return 'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(o)+'&destination='+encodeURIComponent(`${l.dest_city}, ${l.dest_state}`);
+  return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(o);
+}
+function postedAgo(iso){
+  const t=Date.parse(iso); if(isNaN(t))return '<span class="mut">—</span>';
+  const h=(Date.now()-t)/3600000;
+  if(h<1)return '<span class="badge fresh">just posted</span>';
+  if(h<48)return `<b>${Math.floor(h)}h ago</b>`;
+  return `<span class="mut">${Math.floor(h/24)}d ago</span>`;
+}
+function render(){
+  const list=filtered();
+  document.querySelectorAll('th[data-sort]').forEach(th=>{
+    th.innerHTML=th.textContent.replace(/ [▲▼]$/,'')+(th.dataset.sort===sortKey?(sortDir>0?' ▲':' ▼'):'');
+  });
+  $('empty').style.display=leads.length?'none':'block';
+  $('tbody').innerHTML=list.length?list.map((l,i)=>{
+    const rate=l.rate!=null?money(l.rate):`<span class="mut">${esc(l.rate_note||'Call for rate')}</span>`;
+    const rpm=l.rate_per_mile!=null?`<b>$${l.rate_per_mile.toFixed(2)}</b>`:'<span class="mut">—</span>';
+    const route=`<a href="${mapUrl(l)}" target="_blank" rel="noopener">${esc(l.origin_city)},${esc(l.origin_state)} → ${esc(l.dest_city)?esc(l.dest_city)+','+esc(l.dest_state):'<span class="mut">TBD</span>'}</a>`;
+    const contact=esc(l.contact||l.poster||'—');
+    const added=queue.some(x=>x.url===l.url);
+    return `<tr>
+      <td>${scorePill(l.score)}${l.hotshot_ok?'':'<br><span class="badge" style="color:var(--red)">not hotshot</span>'}</td>
+      <td>${route}</td>
+      <td>${rate}</td>
+      <td>${rpm}</td>
+      <td>${l.miles!=null?l.miles.toLocaleString()+' mi':'<span class="mut">?</span>'}</td>
+      <td>${esc(l.equipment_type||'—')}</td>
+      <td>${postedAgo(l.posted_at||l.scraped_at)}</td>
+      <td>${esc(l.source)}</td>
+      <td>${contact}</td>
+      <td>${l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener">open ↗</a>`:'—'}</td>
+      <td><button class="btn ${added?'':'primary'}" data-add="${i}" style="padding:8px 12px;font-size:15px">${added?'✓ Added':'➜ Add'}</button></td>
+    </tr>`;
+  }).join(''):(leads.length?'<tr><td colspan="11" class="mut" style="text-align:center;padding:30px">No leads match the filters.</td>':'');
+  $('tbody').querySelectorAll('button[data-add]').forEach(b=>b.addEventListener('click',()=>addToQueue(+b.dataset.add,b)));
+  $('qCount').textContent=queue.length;
+  $('btnDownload').disabled=!queue.length;
+  $('btnClearQ').disabled=!queue.length;
+}
+
+/* ---------- Add to Load Manager ---------- */
+function leadToLoad(l){
+  return {
+    broker:l.poster||`${l.source} lead`, mc:'', score:60, days:0,
+    puCity:l.origin_city, puState:l.origin_state,
+    doCity:l.dest_city, doState:l.dest_state,
+    loadedMiles:l.miles||0, deadheadMiles:0,
+    rateType:'flat', rate:l.rate||0, ratePerMile:null,
+    quickPay:false, quickPayPct:0, status:'Browsing',
+    notes:`⭐ Hotshot lead score ${Math.round(l.score)}/100 (source: ${l.source})\n`
+         +`Equipment: ${l.equipment_type||'?'} · Est ${l.miles!=null?l.miles+' mi':'miles TBD'}\n`
+         +`${l.rate!=null?'Rate posted '+money(l.rate):'CALL FOR RATE'}\n`
+         +(l.contact?`Contact: ${l.contact}\n`:'')
+         +`${l.url||''}\n${(l.snippet||'').slice(0,220)}`,
+    createdAt:Date.now(), id:'lead_'+Date.now()+'_'+Math.floor(Math.random()*9999)
+  };
+}
+function addToQueue(i,btn){
+  const l=filtered()[i]; if(!l)return;
+  if(queue.some(x=>x.url===l.url)){ toast('Already in the queue'); return; }
+  queue.push(leadToLoad(l));
+  try{ localStorage.setItem(QUEUE_KEY,JSON.stringify(queue)); }catch(e){}
+  toast('✓ Queued — click "⬇ Download import file" then use ⬆ Import in the Load Manager');
+  render();
+}
+$('btnDownload').addEventListener('click',()=>{
+  if(!queue.length)return;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(queue,null,2)],{type:'application/json'}));
+  a.download='load-manager-import.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast(queue.length+' lead(s) exported — open the Load Manager and hit ⬆ Import');
+});
+$('btnClearQ').addEventListener('click',()=>{
+  if(!queue.length)return;
+  if(!confirm('Clear all queued leads? (The exported file is NOT affected.)'))return;
+  queue=[]; try{ localStorage.removeItem(QUEUE_KEY); }catch(e){}
+  render(); toast('Queue cleared');
+});
+// keyboard-free clipboard copy of a single lead (right-click bonus)
+window._copyLead=i=>{ const l=filtered()[i]; if(l)navigator.clipboard.writeText(JSON.stringify(leadToLoad(l),null,2)); };
+
+/* ---------- file picker ---------- */
+$('btnLoad').addEventListener('click',()=>$('fileIn').click());
+$('fileIn').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>loadCSVText(r.result);
+  r.onerror=()=>toast('Could not read that file',true);
+  r.readAsText(f);
+});
+render();
+</script>
+</body>
+</html>

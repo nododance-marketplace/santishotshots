@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/hot-shot-load-manager.html" },
+    { "source": "/viewer", "destination": "/lead_viewer.html" }
+  ]
+}

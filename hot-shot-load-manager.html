@@ -172,6 +172,7 @@ td.small, .mut{color:var(--muted)}
   <div class="hbtns">
     <button class="btn" id="btnCsv">⬇ Export CSV</button>
     <button class="btn" id="btnImport">⬆ Import</button>
+    <button class="btn" id="btnSync">⟳ Sync leads</button>
     <button class="btn danger" id="btnClearSamples">Clear sample data</button>
     <input type="file" id="fileImport" accept=".json" hidden>
   </div>
@@ -772,6 +773,49 @@ $('fileImport').addEventListener('change',e=>{
   r.readAsText(f);
 });
 
+/* ============ LIVE LEAD SYNC (fetches leads.json next to this page) ============ */
+function leadToLoad(l){
+  return {
+    id:'lead:'+l.url, isSample:false,
+    broker:String(l.poster||l.source+' lead'), mc:'',
+    score:60, days:0,
+    puCity:String(l.origin_city||''), puState:String(l.origin_state||''),
+    doCity:String(l.dest_city||''), doState:String(l.dest_state||''),
+    loadedMiles:Math.max(0,+l.miles||0), deadheadMiles:0,
+    rateType:'flat', rate:+l.rate||0, ratePerMile:null,
+    quickPay:false, quickPayPct:0, status:'Browsing',
+    notes:`⭐ Hotshot lead score ${Math.round(+l.score||0)}/100 (source: ${l.source})\n`
+         +`Equipment: ${l.equipment_type||'?'} · Est ${l.miles!=null?l.miles+' mi':'miles TBD'}\n`
+         +`${l.rate? 'Rate posted '+money(l.rate):'CALL FOR RATE'}\n`
+         +(l.contact?`Contact: ${l.contact}\n`:'')
+         +`${l.url||''}\n${String(l.snippet||'').slice(0,220)}`,
+    createdAt:Date.parse(l.posted_at)||Date.now()
+  };
+}
+async function syncLeads(quiet){
+  if(location.protocol!=='http:'&&location.protocol!=='https:'){
+    if(!quiet)toast('Lead sync works on the live site or local server (it fetches leads.json)',true);
+    return;
+  }
+  try{
+    const r=await fetch('leads.json',{cache:'no-store'});
+    if(!r.ok)throw new Error(r.status);
+    const data=await r.json();
+    const items=(data.leads&&data.leads.length?data.leads:(Array.isArray(data)?data:[]));
+    let n=0;
+    items.forEach(l=>{
+      if(!l||!l.url)return;
+      if(loads.some(x=>x.id==='lead:'+l.url))return;
+      loads.push(leadToLoad(l)); n++;
+    });
+    if(n){ saveAll(); renderAll(); toast(`✅ Synced ${n} live lead(s) into Loads (Browsing)`); }
+    else if(!quiet) toast('Leads already up to date');
+  }catch(e){
+    if(!quiet)toast('No leads.json found — run scrape_leads.py and push, or use ⬆ Import',true);
+  }
+}
+$('btnSync').addEventListener('click',()=>syncLeads(false));
+
 /* ============ INIT ============ */
 function renderAll(){ renderDashboard(); renderLoads(); updateNewPreview(); renderSettingsOutputs(); }
 function init(){
@@ -784,6 +828,8 @@ function init(){
   renderAll();
 }
 loadState(); init();
+// live-site convenience: pull freshly scraped leads automatically
+if(location.protocol==='http:'||location.protocol==='https:')syncLeads(true);
 </script>
 </body>
 </html>

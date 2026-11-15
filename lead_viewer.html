@@ -344,6 +344,15 @@ $('fileIn').addEventListener('change',e=>{
   r.readAsText(f);
 });
 render();
+
+/* On the live site (or local http server), auto-load leads.csv sitting next
+   to this page. On file:// browsers block fetch, so the file picker is used. */
+if(location.protocol==='http:'||location.protocol==='https:'){
+  fetch('leads.csv',{cache:'no-store'})
+    .then(r=>r.ok?r.text():Promise.reject(new Error(r.status)))
+    .then(loadCSVText)
+    .catch(()=>{});
+}
 </script>
 </body>
 </html>

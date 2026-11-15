@@ -458,6 +458,11 @@ function loadState(){
       l.loadedMiles=+l.loaded||0; l.deadheadMiles=+l.dead||0;
       delete l.loaded; delete l.dead; fixed=true;
     }
+    // migration: pulls the source link out of notes for leads saved before srcUrl existed
+    if(l&&!l.srcUrl&&l.notes){
+      const m=String(l.notes).match(/https?:\/\/[^\s"]+/);
+      if(m){ l.srcUrl=m[0]; fixed=true; }
+    }
     return l;
   });
   if(fixed)saveAll();
@@ -568,7 +573,7 @@ function renderLoads(){
       <td>${netBadge}${flag}</td>
       <td><select class="rowStatus">${opts}</select></td>
       <td>${qp}</td>
-      <td>${l.notes?'📝':'<span class="mut">—</span>'}</td>
+      <td>${l.notes?'📝':''}${l.srcUrl?` <a href="${esc(l.srcUrl)}" target="_blank" rel="noopener" title="Open the original listing">🔗</a>`:''}</td>
     </tr>`;
   }).join(''):'<tr><td colspan="11" class="mut" style="text-align:center;padding:30px">No loads match. Add one in the New Load tab.</td></tr>';
 
@@ -603,7 +608,7 @@ function openDetail(id){
   $('m_rate').value=l.rate??''; $('m_ratePerMile').value=l.ratePerMile??'';
   $('m_status').value=l.status||'Browsing'; $('m_quickPay').checked=!!l.quickPay;
   $('m_qpPct').value=l.quickPayPct||''; $('m_notes').value=l.notes||'';
-  $('m_brokerLine').innerHTML=`<b>Created ${new Date(l.createdAt||Date.now()).toLocaleDateString()}</b> · <a href="${mapUrl(l)}" target="_blank" rel="noopener">Open in Google Maps ↗</a>`;
+  $('m_brokerLine').innerHTML=`<b>Created ${new Date(l.createdAt||Date.now()).toLocaleDateString()}</b> · <a href="${mapUrl(l)}" target="_blank" rel="noopener">Open in Google Maps ↗</a>${l.srcUrl?` · <a href="${esc(l.srcUrl)}" target="_blank" rel="noopener">Original listing ↗</a>`:''}`;
   updateModalCalc();
   $('modalBack').classList.add('open');
 }
@@ -721,10 +726,10 @@ $('tab-settings').addEventListener('change',readSettings);
 /* ============ EXPORT CSV / CLEAR SAMPLES ============ */
 $('btnCsv').addEventListener('click',()=>{
   if(!loads.length){ toast('No loads to export',true); return; }
-  const cols=['Broker','MC','Score','DaysToPay','Pickup','Dropoff','LoadedMiles','DeadheadMiles','TotalMiles','Rate','RatePerLoadedMile','DeadheadAdjRPM','EstCost','NetProfit','Status','QuickPay','QuickPayFeePct','NetAfterFee','Notes','Created'];
+  const cols=['Broker','MC','Score','DaysToPay','Pickup','Dropoff','LoadedMiles','DeadheadMiles','TotalMiles','Rate','RatePerLoadedMile','DeadheadAdjRPM','EstCost','NetProfit','Status','QuickPay','QuickPayFeePct','NetAfterFee','SourceURL','Notes','Created'];
   const q=v=>{ v=v==null?'':String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
   const rows=loads.map(l=>{ const c=calc(l); return [l.broker,l.mc,l.score,l.days,l.puCity+', '+l.puState,l.doCity+', '+l.doState,
-    c.loaded,c.dead,c.total,c.rate,l.rateType==='permile'?c.rpmLoaded:'',c.dhRpm,c.cost,c.net,l.status,l.quickPay?'yes':'no',l.quickPayPct||'',l.quickPay?c.netAfterFee:'',l.notes,
+    c.loaded,c.dead,c.total,c.rate,l.rateType==='permile'?c.rpmLoaded:'',c.dhRpm,c.cost,c.net,l.status,l.quickPay?'yes':'no',l.quickPayPct||'',l.quickPay?c.netAfterFee:'',l.srcUrl||'',l.notes,
     new Date(l.createdAt||Date.now()).toLocaleDateString()].map(q).join(','); });
   const csv=[cols.map(q).join(','),...rows].join('\r\n');
   const a=document.createElement('a');
@@ -762,6 +767,7 @@ $('fileImport').addEventListener('change',e=>{
         rateType:(o.rateType==='permile'?'permile':'flat'), rate:+o.rate||0, ratePerMile:+o.ratePerMile||0,
         quickPay:!!o.quickPay, quickPayPct:Math.max(0,+o.quickPayPct||0),
         status:STATUSES.includes(o.status)?o.status:'Browsing',
+        srcUrl:String(o.srcUrl||''),
         notes:String(o.notes||''), createdAt:+o.createdAt||Date.now()
       });
       n++;
@@ -784,6 +790,7 @@ function leadToLoad(l){
     loadedMiles:Math.max(0,+l.miles||0), deadheadMiles:0,
     rateType:'flat', rate:+l.rate||0, ratePerMile:null,
     quickPay:false, quickPayPct:0, status:'Browsing',
+    srcUrl:String(l.url||''),
     notes:`⭐ Hotshot lead score ${Math.round(+l.score||0)}/100 (source: ${l.source})\n`
          +`Equipment: ${l.equipment_type||'?'} · Est ${l.miles!=null?l.miles+' mi':'miles TBD'}\n`
          +`${l.rate? 'Rate posted '+money(l.rate):'CALL FOR RATE'}\n`

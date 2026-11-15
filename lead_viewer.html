@@ -301,6 +301,7 @@ function leadToLoad(l){
     loadedMiles:l.miles||0, deadheadMiles:0,
     rateType:'flat', rate:l.rate||0, ratePerMile:null,
     quickPay:false, quickPayPct:0, status:'Browsing',
+    srcUrl:l.url||'',
     notes:`⭐ Hotshot lead score ${Math.round(l.score)}/100 (source: ${l.source})\n`
          +`Equipment: ${l.equipment_type||'?'} · Est ${l.miles!=null?l.miles+' mi':'miles TBD'}\n`
          +`${l.rate!=null?'Rate posted '+money(l.rate):'CALL FOR RATE'}\n`

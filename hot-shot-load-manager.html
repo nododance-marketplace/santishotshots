@@ -559,8 +559,8 @@ function renderLoads(){
     const opts=STATUSES.map(s=>`<option${s===l.status?' selected':''}>${s}</option>`).join('');
     return `<tr class="lrow" data-id="${l.id}">
       <td><b>${esc(l.broker)}</b>${l.isSample?' <span class="pill gray">sample</span>':''}<br><span class="mut">${esc(l.mc||'')}</span><br>${scorePill(l.score)}${l.days?` <span class="mut">${l.days}d to pay</span>`:''}</td>
-      <td><a href="${mapUrl(l)}" target="_blank" rel="noopener" class="routeLink">${esc(l.puCity)},${esc(l.puState)} → ${esc(l.doCity)},${esc(l.doState)}</a></td>
-      <td>${c2.loaded.toLocaleString()} <span class="mut">+ ${c2.dead.toLocaleString()} =</span> <b>${c2.total.toLocaleString()}</b></td>
+      <td><a href="${mapUrl(l)}" target="_blank" rel="noopener" class="routeLink">${esc(l.puCity)},${esc(l.puState)} → ${l.doCity?esc(l.doCity)+','+esc(l.doState):'<span class="mut">dest TBD</span>'}</a></td>
+      <td>${c2.total?`${c2.loaded.toLocaleString()} <span class="mut">+ ${c2.dead.toLocaleString()} =</span> <b>${c2.total.toLocaleString()}</b>`:'<span class="mut">—</span>'}</td>
       <td>${money(c2.rate)}${l.rateType==='permile'?'<br><span class="mut">per-mile</span>':''}</td>
       <td>${rpm(c2.rpmLoaded)}</td>
       <td><b style="font-size:18px">${rpm(c2.dhRpm)}</b></td>
